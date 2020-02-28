@@ -5,42 +5,41 @@ const dboper = require('./operations');
 const url = 'mongodb://localhost:27017/';
 const dbname = 'REGNAcon';
 
-MongoClient.connect(url, { useUnifiedTopology: true }, (err, client) => {
-
-    assert.strictEqual(err, null);
+MongoClient.connect(url, { useUnifiedTopology: true }).then(client => {
 
     console.log('Connected correctly to server');
-
     const db = client.db(dbname);
 
-    db.dropCollection('celebs', (err, result) => {
-        console.log('Dropped Collection: ', result);
+    dboper.insertDocument(db, { name: "Patrick Stewart", description: "Test"},
+        'celebs')
+        .then(result => {
+            console.log('Insert Document:\n', result.ops);
 
-        dboper.insertDocument(db, { name: "Patrick Stewart", description: "Test"},
-            'celebs', result => {
-            console.log('Insert Document:', result.ops);
+            return dboper.findDocuments(db, 'celebs');
+        })
+        .then(docs => {
+                console.log('Found Documents:\n', docs);
 
-            dboper.findDocuments(db, 'celebs', docs => {
-                console.log('Found Documents:', docs);
+            return dboper.updateDocument(db, { name: "Patrick Stewart" },
+                    { description: "Updated Test" }, 'celebs');
 
-                dboper.updateDocument(db, { name: "Patrick Stewart" },
-                    { description: "Updated Test Description" }, 'celebs',
-                    result => {
-                        console.log('Updated Document Count:', result.result.nModified);
+        })
+        .then(result => {
+            console.log('Updated Document:\n', result.result);
 
-                        dboper.findDocuments(db, 'celebs', docs => {
-                            console.log('Found  Documents:', docs);
+            return dboper.findDocuments(db, 'celebs');
+        })
+        .then(docs => {
+            console.log('Found Updated Documents:\n', docs);
                             
-                            dboper.removeDocument(db, { name: "Patrick Stewart" },
-                                'celebs', result => {
-                                console.log('Deleted Document Count:', result.deletedCount);
+            return db.dropCollection('celebs');
+        })
+        .then(result => {
+            console.log('Dropped Collection:', result);
 
-                                client.close();
-                            });
-                        });
-                    }
-                );
-            });
-        });
-    });
-});
+            return client.close();
+        })
+        .catch(err => console.log(err));
+
+})
+.catch(err => console.log(err));

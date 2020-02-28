@@ -1,5 +1,6 @@
 const MongoClient = require('mongodb').MongoClient;
 const assert = require('assert').strict;
+const dboper = require('./operations');
 
 const url = 'mongodb://localhost:27017/';
 const dbname = 'REGNAcon';
@@ -13,21 +14,32 @@ MongoClient.connect(url, { useUnifiedTopology: true }, (err, client) => {
     const db = client.db(dbname);
 
     db.dropCollection('celebs', (err, result) => {
-        assert.strictEqual(err, null);
-        console.log('Dropped Collection', result);
+        console.log('Dropped Collection: ', result);
 
-        const collection = db.collection('celebs');
-
-        collection.insertOne({name: "Patrick Stewart", description: "Test"},
-        (err, result) => {
-            assert.strictEqual(err, null);
+        dboper.insertDocument(db, { name: "Patrick Stewart", description: "Test"},
+            'celebs', result => {
             console.log('Insert Document:', result.ops);
 
-            collection.find().toArray((err, docs) => {
-                assert.strictEqual(err, null);
+            dboper.findDocuments(db, 'celebs', docs => {
                 console.log('Found Documents:', docs);
 
-                client.close();
+                dboper.updateDocument(db, { name: "Patrick Stewart" },
+                    { description: "Updated Test Description" }, 'celebs',
+                    result => {
+                        console.log('Updated Document Count:', result.result.nModified);
+
+                        dboper.findDocuments(db, 'celebs', docs => {
+                            console.log('Found  Documents:', docs);
+                            
+                            dboper.removeDocument(db, { name: "Patrick Stewart" },
+                                'celebs', result => {
+                                console.log('Deleted Document Count:', result.deletedCount);
+
+                                client.close();
+                            });
+                        });
+                    }
+                );
             });
         });
     });
